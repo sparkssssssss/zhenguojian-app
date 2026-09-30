@@ -779,7 +779,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ];
         final scaffold = Scaffold(
           appBar: AppBar(
-            toolbarHeight: television ? 64 : null,
+            toolbarHeight: television ? 76 : null,
             titleSpacing: 12,
             title: _selectionMode
                 ? const Text(
@@ -989,7 +989,7 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 if (television) ...[
                   SizedBox(
-                    width: 176,
+                    width: 208,
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(8, 24, 8, 12),
                       child: RemoteList(
@@ -997,7 +997,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         itemKeys: [
                           for (final entry in navEntries) '${entry.$1}',
                         ],
-                        itemExtent: 60,
+                        itemExtent: 68,
                         spacing: 14,
                         padding: EdgeInsets.zero,
                         autofocus: true,

@@ -356,13 +356,13 @@ class _TelevisionControlsState extends State<TelevisionControls> {
                               children: [
                                 Text(
                                   '${formatPosition(position)} / ${formatPosition(duration)}',
-                                  style: const TextStyle(fontSize: 16),
+                                  style: const TextStyle(fontSize: 18),
                                 ),
                                 const Spacer(),
                                 const Text(
                                   '左右快进 · 确认暂停',
                                   style: TextStyle(
-                                    fontSize: 14,
+                                    fontSize: 15,
                                     color: Colors.white70,
                                   ),
                                 ),
@@ -446,7 +446,7 @@ class _TelevisionControlsState extends State<TelevisionControls> {
                       const SizedBox(height: 6),
                       const Text(
                         '控制条隐藏后：左右快进 10 秒，上下或确认键显示控制条',
-                        style: TextStyle(fontSize: 13, color: Colors.white70),
+                        style: TextStyle(fontSize: 15, color: Colors.white70),
                       ),
                     ],
                   ),
@@ -564,7 +564,7 @@ class TelevisionSettingsDialog extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('倍速', style: TextStyle(fontSize: 18)),
+            const Text('倍速', style: TextStyle(fontSize: 20)),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
@@ -584,7 +584,7 @@ class TelevisionSettingsDialog extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 20),
-            const Text('清晰度', style: TextStyle(fontSize: 18)),
+            const Text('清晰度', style: TextStyle(fontSize: 20)),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
@@ -626,7 +626,7 @@ class TelevisionSettingsDialog extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 8),
-              Text(danmakuStatus, style: const TextStyle(fontSize: 14)),
+              Text(danmakuStatus, style: const TextStyle(fontSize: 15)),
               if (onRetryDanmaku != null)
                 RemoteButton(
                   key: const ValueKey('tv-danmaku-retry'),
@@ -653,7 +653,7 @@ class TelevisionSettingsDialog extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
-            Text(preloadStatus, style: const TextStyle(fontSize: 14)),
+            Text(preloadStatus, style: const TextStyle(fontSize: 15)),
             const SizedBox(height: 20),
             RemoteButton(
               label: favorite ? '取消追剧' : '加入追剧',

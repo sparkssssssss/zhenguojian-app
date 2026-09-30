@@ -21,8 +21,8 @@ ThemeData televisionTheme(ThemeData theme) {
   );
   final button = ButtonStyle(
     side: focusSide,
-    minimumSize: const WidgetStatePropertyAll(Size(52, 48)),
-    textStyle: const WidgetStatePropertyAll(TextStyle(fontSize: 17)),
+    minimumSize: const WidgetStatePropertyAll(Size(60, 54)),
+    textStyle: const WidgetStatePropertyAll(TextStyle(fontSize: 20)),
   );
   return theme.copyWith(
     focusColor: colors.primaryContainer,

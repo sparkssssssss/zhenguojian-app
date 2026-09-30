@@ -334,7 +334,7 @@ class _DetailScreenState extends State<DetailScreen> {
       },
       child: Scaffold(
         appBar: AppBar(
-          toolbarHeight: television ? 64 : null,
+          toolbarHeight: television ? 76 : null,
           title: Text(drama.title, overflow: TextOverflow.ellipsis),
           actions: [
             RefreshAction(

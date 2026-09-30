@@ -166,7 +166,7 @@ class RemoteButton extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              fontSize: 17,
+              fontSize: 20,
               color: onPressed == null
                   ? Theme.of(context).disabledColor
                   : Theme.of(context).colorScheme.onSurface,
@@ -778,7 +778,7 @@ class RemoteListTile extends StatelessWidget {
   final VoidCallback? onFocus;
   final String? label;
 
-  static const double extent = 80;
+  static const double extent = 96;
 
   @override
   Widget build(BuildContext context) {
@@ -793,7 +793,7 @@ class RemoteListTile extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       label: label ?? title,
       child: SizedBox(
-        height: 52,
+        height: 64,
         child: Row(
           children: [
             if (leading != null) ...[leading!, const SizedBox(width: 14)],
@@ -808,7 +808,7 @@ class RemoteListTile extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      fontSize: 18,
+                      fontSize: 21,
                       height: 1.3,
                       fontWeight: FontWeight.w600,
                     ),
@@ -819,7 +819,7 @@ class RemoteListTile extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: 16,
                         height: 1.3,
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
@@ -878,7 +878,7 @@ class RemoteEpisodeButton extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontSize: compact ? 14 : 20,
+                fontSize: compact ? 15 : 22,
                 fontWeight: current ? FontWeight.w700 : FontWeight.w500,
               ),
             ),

@@ -102,6 +102,7 @@ class DramaCover extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final television = AppLayout.isTelevision(context);
     final placeholder = Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -153,7 +154,10 @@ class DramaCover extends StatelessWidget {
               bottom: 9,
               child: Text(
                 '共 ${drama.episodes} 集',
-                style: const TextStyle(color: Colors.white, fontSize: 12),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: television ? 15 : 12,
+                ),
               ),
             ),
           if (drama.vip)
@@ -166,11 +170,11 @@ class DramaCover extends StatelessWidget {
                   color: const Color(0xFFF6C86B),
                   borderRadius: BorderRadius.circular(6),
                 ),
-                child: const Text(
+                child: Text(
                   'VIP',
                   style: TextStyle(
-                    color: Color(0xFF40300D),
-                    fontSize: 11,
+                    color: const Color(0xFF40300D),
+                    fontSize: television ? 14 : 11,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -393,9 +397,9 @@ class DramaTile extends StatelessWidget {
                         badge!,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: Colors.white,
-                          fontSize: 12,
+                          fontSize: television ? 15 : 12,
                         ),
                       ),
                     ),
