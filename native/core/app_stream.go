@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"path"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -33,6 +34,7 @@ type nativeStreamSession struct {
 	assets      map[string]nativeStreamAsset
 	referer     string
 	key         []byte
+	cenc        *cencTrack
 	ctx         context.Context
 	cancel      context.CancelFunc
 	lastUsed    time.Time
@@ -101,7 +103,51 @@ func (stream *nativeStreamServer) nativeOpen(media providerMedia) (string, strin
 		entry.data = []byte(media.Playlist)
 		entry.contentType = "application/vnd.apple.mpegurl"
 	}
+	if media.CENCKey != nil && len(media.CENCKey) == 16 && !strings.HasSuffix(strings.ToLower(media.URL), ".m3u8") {
+		if track := stream.nativeBuildCENC(ctx, media); track != nil {
+			session.cenc = track
+		}
+	}
 	return stream.nativeAsset(token, session, entry), token
+}
+
+// nativeBuildCENC 拉取流头部（moov + IV 表），构建 CENC 解密上下文。
+// 红果流的 moov 约 200KB、IV 表约 40KB（4911×8），1MB 头部预算充足。
+func (stream *nativeStreamServer) nativeBuildCENC(ctx context.Context, media providerMedia) *cencTrack {
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, media.URL, nil)
+	if err != nil {
+		return nil
+	}
+	request.Header.Set("User-Agent", userAgent)
+	request.Header.Set("Referer", media.Referer)
+	request.Header.Set("Range", "bytes=0-1048575")
+	request.Header.Set("Accept-Encoding", "identity")
+	response, err := stream.nativeRequest(request)
+	if err != nil {
+		return nil
+	}
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusOK && response.StatusCode != http.StatusPartialContent {
+		return nil
+	}
+	head, err := io.ReadAll(io.LimitReader(response.Body, 1<<20))
+	if err != nil || len(head) < 32 {
+		return nil
+	}
+	parsed, err := cencParseMoov(head)
+	if err != nil {
+		return nil
+	}
+	track := &cencTrack{Samples: parsed.Samples}
+	copy(track.Key[:], media.CENCKey)
+	last := parsed.Samples[len(parsed.Samples)-1]
+	ivEnd := parsed.IV.Base + int64(parsed.IV.Count)*8
+	if ivEnd > int64(len(head)) {
+		return nil
+	}
+	track.IVBytes = append([]byte(nil), head[parsed.IV.Base:ivEnd]...)
+	_ = last
+	return track
 }
 
 func (stream *nativeStreamServer) nativeRelease(token string) {
@@ -322,6 +368,10 @@ func (stream *nativeStreamServer) nativeServe(writer http.ResponseWriter, reques
 		_, _ = io.WriteString(writer, rewritten)
 		return
 	}
+	if session.cenc != nil {
+		stream.nativeServeCENC(writer, request, session, asset, response)
+		return
+	}
 	for _, name := range []string{"Content-Type", "Content-Length", "Content-Range", "Accept-Ranges", "ETag", "Last-Modified"} {
 		if value := response.Header.Get(name); value != "" {
 			writer.Header().Set(name, value)
@@ -331,4 +381,109 @@ func (stream *nativeStreamServer) nativeServe(writer http.ResponseWriter, reques
 	if request.Method == http.MethodGet {
 		_, _ = io.Copy(writer, response.Body)
 	}
+}
+
+// nativeServeCENC 按播放器的 Range 请求解密对应样本区间后回传。
+func (stream *nativeStreamServer) nativeServeCENC(writer http.ResponseWriter, request *http.Request,
+	session *nativeStreamSession, asset nativeStreamAsset, response *http.Response) {
+	rangeHeader := request.Header.Get("Range")
+	var start, end int64 = 0, -1
+	if rangeHeader != "" {
+		if parsed := parseByteRange(rangeHeader); parsed != nil {
+			start, end = parsed[0], parsed[1]
+		}
+	}
+	if start < 0 {
+		http.Error(writer, "Range 头无效", http.StatusRequestedRangeNotSatisfiable)
+		return
+	}
+	lastSample := session.cenc.Samples[len(session.cenc.Samples)-1]
+	total := lastSample.Offset + lastSample.Length
+	if end < 0 || end >= total {
+		// 开放式请求（bytes=0-）只回前 8MB：播放器会按需继续 Range，
+		// 避免一次性下载/解密整集导致起播慢、内存峰值高。
+		end = start + (8 << 20) - 1
+		if end >= total {
+			end = total - 1
+		}
+	}
+	length := end - start + 1
+	if length <= 0 {
+		writer.Header().Set("Content-Range", "bytes */"+strconv64(total))
+		writer.WriteHeader(http.StatusRequestedRangeNotSatisfiable)
+		return
+	}
+	// 向后对齐 16 字节块（可能跨出一个样本，多解密无害）
+	alignedStart := start - start%16
+	upstream, err := http.NewRequestWithContext(request.Context(), http.MethodGet, asset.address, nil)
+	if err != nil {
+		http.Error(writer, "媒体地址无效", http.StatusBadGateway)
+		return
+	}
+	upstream.Header.Set("User-Agent", userAgent)
+	upstream.Header.Set("Referer", session.referer)
+	upstream.Header.Set("Range", "bytes="+strconv64(alignedStart)+"-"+strconv64(end))
+	upstream.Header.Set("Accept-Encoding", "identity")
+	upstreamResponse, err := stream.nativeRequest(upstream)
+	if err != nil {
+		http.Error(writer, "读取媒体失败，请重试", http.StatusBadGateway)
+		return
+	}
+	defer upstreamResponse.Body.Close()
+	if upstreamResponse.StatusCode != http.StatusPartialContent && upstreamResponse.StatusCode != http.StatusOK {
+		http.Error(writer, "读取媒体失败", upstreamResponse.StatusCode)
+		return
+	}
+	cipherText, err := io.ReadAll(io.LimitReader(upstreamResponse.Body, length+(alignedStart-start)+64<<10))
+	if err != nil {
+		http.Error(writer, "读取媒体失败，请重试", http.StatusBadGateway)
+		return
+	}
+	plain, err := session.cenc.decryptRange(cipherText, alignedStart)
+	if err != nil {
+		http.Error(writer, "解密失败", http.StatusBadGateway)
+		return
+	}
+	skip := int(start - alignedStart)
+	if skip > len(plain) {
+		skip = len(plain)
+	}
+	payload := plain[skip:]
+	if int64(len(payload)) > length {
+		payload = payload[:length]
+	}
+	writer.Header().Set("Content-Type", "video/mp4")
+	writer.Header().Set("Accept-Ranges", "bytes")
+	writer.Header().Set("Content-Range", "bytes "+strconv64(start)+"-"+strconv64(start+int64(len(payload))-1)+"/"+strconv64(total))
+	writer.Header().Set("Content-Length", strconv64(int64(len(payload))))
+	writer.WriteHeader(http.StatusPartialContent)
+	if request.Method == http.MethodGet {
+		_, _ = writer.Write(payload)
+	}
+}
+
+func parseByteRange(header string) []int64 {
+	parts := strings.SplitN(header, "=", 2)
+	if len(parts) != 2 || !strings.HasPrefix(parts[0], "bytes") {
+		return nil
+	}
+	span := strings.SplitN(parts[1], "-", 2)
+	if len(span) != 2 {
+		return nil
+	}
+	start, err := strconv.ParseInt(span[0], 10, 64)
+	if err != nil || start < 0 {
+		return nil
+	}
+	end := int64(-1)
+	if span[1] != "" {
+		if end, err = strconv.ParseInt(span[1], 10, 64); err != nil {
+			return nil
+		}
+	}
+	return []int64{start, end}
+}
+
+func strconv64(value int64) string {
+	return strconv.FormatInt(value, 10)
 }
