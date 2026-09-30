@@ -349,13 +349,13 @@ class DramaTile extends StatelessWidget {
   static double titleHeight(BuildContext context) =>
       MediaQuery.textScalerOf(
         context,
-      ).scale(AppLayout.isTelevision(context) ? 17 : 14) *
+      ).scale(AppLayout.isTelevision(context) ? 21 : 14) *
       2.6;
 
   static double subtitleHeight(BuildContext context) =>
       MediaQuery.textScalerOf(
         context,
-      ).scale(AppLayout.isTelevision(context) ? 14 : 12) *
+      ).scale(AppLayout.isTelevision(context) ? 16 : 12) *
       1.3;
 
   static double extentFor(BuildContext context, double width) =>
@@ -436,7 +436,7 @@ class DramaTile extends StatelessWidget {
               style: TextStyle(
                 fontWeight: FontWeight.w600,
                 height: 1.3,
-                fontSize: television ? 17 : 14,
+                fontSize: television ? 21 : 14,
               ),
             ),
           ),
@@ -451,7 +451,7 @@ class DramaTile extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontSize: television ? 14 : 12,
+                fontSize: television ? 16 : 12,
                 height: 1.3,
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
@@ -551,12 +551,17 @@ class StatusPanel extends StatelessWidget {
 }
 
 SliverGridDelegate dramaGridDelegate(BuildContext context, double width) {
-  final columns = width < 600 ? 3 : (width / 180).floor().clamp(4, 9);
-  final spacing = width < 600 ? 10.0 : 18.0;
+  final television = AppLayout.isTelevision(context);
+  final columns = television
+      ? (width / 240).floor().clamp(3, 6)
+      : width < 600
+      ? 3
+      : (width / 180).floor().clamp(4, 9);
+  final spacing = television ? 24.0 : (width < 600 ? 10.0 : 18.0);
   final tileWidth = (width - (columns - 1) * spacing) / columns;
   return SliverGridDelegateWithFixedCrossAxisCount(
     crossAxisCount: columns,
-    mainAxisSpacing: 22,
+    mainAxisSpacing: television ? 28 : 22,
     crossAxisSpacing: spacing,
     mainAxisExtent: DramaTile.extentFor(context, tileWidth),
   );

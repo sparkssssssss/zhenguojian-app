@@ -238,7 +238,9 @@ class LocalStore extends ChangeNotifier {
       _configurationError == null ? _bool(_key('hideVip')) ?? true : true;
   String get displayMode {
     final value = _configurationError == null ? _string('displayMode') : null;
-    return {'auto', 'television', 'standard'}.contains(value) ? value! : 'auto';
+    return {'auto', 'television', 'standard'}.contains(value)
+        ? value!
+        : 'television';
   }
 
   String get themeMode {
